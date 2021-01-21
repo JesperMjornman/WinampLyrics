@@ -1,0 +1,9 @@
+﻿  WinampLyricsFinder.cpp
+E:\Program Files (x86)\Microsoft Visual Studio\Projects\DarkLyricsAPI\DarkLyricsAPI\lyricdecoder.h(83,25): warning C4018: '<': signed/unsigned mismatch
+     Creating library C:\Users\46709\source\repos\WinampLyricsFinder\Release\WinampLyricsFinder.lib and object C:\Users\46709\source\repos\WinampLyricsFinder\Release\WinampLyricsFinder.exp
+  Generating code
+  0 of 181 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  WinampLyricsFinder.vcxproj -> C:\Users\46709\source\repos\WinampLyricsFinder\Release\WinampLyricsFinder.dll
