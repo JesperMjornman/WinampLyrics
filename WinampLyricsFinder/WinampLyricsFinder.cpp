@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <thread>
 #include <mutex>
-
+#include <exception>
 #include "api.h"
 #include <api\service\waservicefactory.h>
 #include <api\application\api_application.h>
@@ -29,7 +29,7 @@
 #define FILE_INFO_BUFFER_SIZE 128
 #define MAX_THREAD_COUNT 1
 
-static const GUID myWndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
+static const GUID wndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
 static const GUID GenEmbedWndExampleLangGUID =
 { 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
 
@@ -81,9 +81,6 @@ extern "C" __declspec(dllexport) winampGeneralPurposePlugin * winampGetGeneralPu
 {
 	return &plugin;
 }
-
-void GetWinampPath();
-
 winampGeneralPurposePlugin* getModule(int which)
 {
 	switch (which)
@@ -127,11 +124,6 @@ LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 	LRESULT res = CallWindowProc(lpWndProcOld, hwnd, message, wParam, lParam);
 	HandleEmbeddedWindowWinampWindowMessages(embedWnd, EMBEDWND_ID, &myWndState, FALSE, hwnd, message, wParam, lParam);
 	return res;
-}
-
-void UpdateHWNDText(HWND window) // Some callback shit? wtf is happening
-{
-
 }
 
 void config()
@@ -185,7 +177,7 @@ int init()
 
 			ServiceBuild(WASABI_API_APP, applicationApiServiceGuid);
 
-			embedWnd = CreateEmbeddedWindow(&myWndState, myWndStateGUID); // hmm
+			embedWnd = CreateEmbeddedWindow(&myWndState, wndStateGUID); // hmm
 	
 			// once the window is created we can then specify the window title and menu integration
 			SetWindowText(embedWnd, WASABI_API_LNGSTRINGW(IDS_PLUGIN_NAME));
@@ -238,17 +230,6 @@ INT_PTR CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 	return HandleEmbeddedWindowChildMessages(embedWnd, EMBEDWND_ID, hwnd, message, wParam, lParam);
 }
 
-void GetWinampPath()
-{
-	WCHAR* p = wa_path;
-	p += GetModuleFileName(0, wa_path, sizeof(wa_path) / 2) - 1;
-	while (p && *p != '\\') 
-	{
-		p = CharPrev(wa_path, p); 
-	}
-	if (p) *p = 0;
-}
-
 void GetAlbumLyrics(HWND hwnd)
 {
 	while (!album_mutex.try_lock()) { Sleep(10); } // Could be circumvented with a global thread.
@@ -275,8 +256,14 @@ void GetAlbumLyrics(HWND hwnd)
 	if (active_song != title)
 	{
 		album.songs.clear();
-		LyricsUtil::DarkLyricsDecoder(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), album);
-
+		try
+		{
+			LyricsUtil::DarkLyricsDecoder(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), album);
+		}
+		catch (std::exception& e)
+		{
+			MessageBoxA(hwnd, e.what(), "EXCEPTION THROWN", MB_OK);
+		}
 		active_song = std::wstring(title);
 		const wchar_t* current{ album.songs.size() > 0 ? album.songs[std::wstring(title)].c_str() : L"Not found." };
 		if (album.songs.size() > 0) 
