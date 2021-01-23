@@ -53,8 +53,8 @@ UINT              LYRICS_MENUID, EMBEDWND_ID;
 std::atomic<int>  active_threads{};
 std::wstring      active_song;
 std::mutex        album_mutex;
-LyricsUtil::Album album;
 LyricHandler      handler;
+bool              isActivated = true;
 COLORREF clrBackground     = RGB(0, 0, 0),
 		 clrCuePoint       = RGB(117, 116, 139),
 		 clrGeneratingText = RGB(0, 128, 0);
