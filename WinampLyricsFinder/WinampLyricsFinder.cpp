@@ -33,14 +33,13 @@ static const GUID wndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x2
 static const GUID GenEmbedWndExampleLangGUID =
 { 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
 
-api_service     *WASABI_API_SVC  = 0;
+api_service     *WASABI_API_SVC = 0;
 api_language    *WASABI_API_LNG = 0;
-api_application *WASABI_API_APP  = 0;
+api_application *WASABI_API_APP = 0;
 
 INT_PTR CALLBACK ChildWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-//void ProcessSkinChange();
 void GetAlbumLyrics(HWND hwnd);
 
 HINSTANCE         WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
@@ -55,17 +54,17 @@ std::atomic<int>  active_threads{};
 std::wstring      active_song;
 std::mutex        album_mutex;
 LyricsUtil::Album album;
-
+LyricHandler      handler;
 COLORREF clrBackground     = RGB(0, 0, 0),
 		 clrCuePoint       = RGB(117, 116, 139),
 		 clrGeneratingText = RGB(0, 128, 0);
 		 
 
 // Winamp PLUGIN specific funcs
-// -------------
 void config();
 void quit();
 int  init();
+// -------
 
 winampGeneralPurposePlugin plugin =
 {
@@ -75,12 +74,12 @@ winampGeneralPurposePlugin plugin =
     config,
     quit,
 };
-// -----------
 
 extern "C" __declspec(dllexport) winampGeneralPurposePlugin * winampGetGeneralPurposePlugin()
 {
 	return &plugin;
 }
+
 winampGeneralPurposePlugin* getModule(int which)
 {
 	switch (which)
@@ -177,7 +176,7 @@ int init()
 
 			ServiceBuild(WASABI_API_APP, applicationApiServiceGuid);
 
-			embedWnd = CreateEmbeddedWindow(&myWndState, wndStateGUID); // hmm
+			embedWnd = CreateEmbeddedWindow(&myWndState, wndStateGUID);
 	
 			// once the window is created we can then specify the window title and menu integration
 			SetWindowText(embedWnd, WASABI_API_LNGSTRINGW(IDS_PLUGIN_NAME));
@@ -225,6 +224,37 @@ INT_PTR CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			GetAlbumLyrics(hwnd);
 		}
 	}
+	case WM_VSCROLL:
+	{
+		SCROLLINFO scrollInfo;
+		scrollInfo.cbSize = sizeof(scrollInfo);
+		scrollInfo.fMask = SIF_ALL;
+
+		GetScrollInfo(hwnd, SB_VERT, &scrollInfo);
+		int nPos = scrollInfo.nPos;
+		switch (LOWORD(wParam))
+		{
+		case SB_LINEDOWN:
+			nPos -= 1;
+			break;
+		case SB_LINEUP:
+			nPos += 1;
+			break;
+		case SB_PAGELEFT:
+			nPos -= scrollInfo.nPage;
+			break;
+		case SB_PAGERIGHT:
+			nPos += scrollInfo.nPage;
+			break;
+		case SB_THUMBTRACK:
+			nPos = scrollInfo.nTrackPos;
+			break;
+		default:
+			break;
+		}
+		
+		break;
+	}
 	default: break;
 	}
 	return HandleEmbeddedWindowChildMessages(embedWnd, EMBEDWND_ID, hwnd, message, wParam, lParam);
@@ -233,7 +263,6 @@ INT_PTR CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 void GetAlbumLyrics(HWND hwnd)
 {
 	while (!album_mutex.try_lock()) { Sleep(10); } // Could be circumvented with a global thread.
-
 	const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
 	wchar_t active_song_artist[FILE_INFO_BUFFER_SIZE]{ 0 }, active_song_album[FILE_INFO_BUFFER_SIZE]{ 0 }, title[FILE_INFO_BUFFER_SIZE]{ 0 };
 
@@ -255,21 +284,33 @@ void GetAlbumLyrics(HWND hwnd)
 
 	if (active_song != title)
 	{
-		album.songs.clear();
+		if (handler.GetAlbum().name == active_song_album)
+		{
+			const wchar_t* current{ handler[active_song].c_str() };
+			SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
+		}
+
 		try
 		{
-			LyricsUtil::DarkLyricsDecoder(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), album);
+			handler.GetLyrics(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), LyricsUtil::DarkLyricsDecoder);
+			//LyricsUtil::DarkLyricsDecoder(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), album);
+			active_song = std::wstring(title);
+
+			int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
+			if (handler.GetSize() > 0)
+			{				
+				const wchar_t* current{ handler[active_song].c_str() };
+				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current); 
+			}
+			else
+			{			
+				SetDlgItemText(childWnd, IDC_LYRIC_STRING, L"Lyrics not found.");
+			}
 		}
 		catch (std::exception& e)
 		{
 			MessageBoxA(hwnd, e.what(), "EXCEPTION THROWN", MB_OK);
 		}
-		active_song = std::wstring(title);
-		const wchar_t* current{ album.songs.size() > 0 ? album.songs[std::wstring(title)].c_str() : L"Not found." };
-		if (album.songs.size() > 0) 
-		{
-			SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
-		}	
 	}
 	album_mutex.unlock(); // Unlock.
 	--active_threads;
