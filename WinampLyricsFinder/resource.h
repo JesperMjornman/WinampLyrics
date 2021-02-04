@@ -17,6 +17,7 @@
 #define IDC_REFRESH_BUTTON              1008
 #define IDC_SCROLLBAR1                  1009
 #define IDC_EDIT3                       1014
+#define IDC_PROGRESS1                   1015
 #define ID_SUBMENU_RE                   40001
 #define ID_SUBMENU_ABOUT                40002
 #define ID_SUBMENU_RERENDER             40003
@@ -39,7 +40,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        106
 #define _APS_NEXT_COMMAND_VALUE         40010
-#define _APS_NEXT_CONTROL_VALUE         1015
+#define _APS_NEXT_CONTROL_VALUE         1017
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

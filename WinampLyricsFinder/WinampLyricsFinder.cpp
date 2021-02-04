@@ -118,7 +118,8 @@ LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 			else if (lParam == IPC_FF_ONCOLORTHEMECHANGED)
 			{
 				InvalidateRect(childWnd, NULL, TRUE);
-				WADlg_init(hwnd);				
+				WADlg_init(hwnd);
+				SetFocus(childWnd); // Circumvent static label not updating by setting focus to child wnd.
 			}
 			break;
 		}
@@ -233,7 +234,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		case WM_CTLCOLORDLG:
 		{
 			rgbBgColor = WADlg_getColor(WADLG_ITEMBG);
-			//SetDlgItemText(hwnd, IDC_LYRIC_STRING, L"TESTING 123");//hmm
+			SetDlgItemText(hwnd, IDC_LYRIC_STRING, active_song_lyrics.c_str());//hmm
 			return (INT_PTR)CreateSolidBrush(rgbBgColor);
 		}
 		case WM_CTLCOLORSTATIC:
@@ -322,7 +323,8 @@ void GetAlbumLyrics(HWND hwnd)
 			int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
 			if (handler.GetSize())
 			{				
-				const wchar_t* current{ handler[active_song].c_str() };
+				active_song_lyrics = handler[active_song];
+				const wchar_t* current{ active_song_lyrics.c_str() };
 				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current); 
 			}
 			else
