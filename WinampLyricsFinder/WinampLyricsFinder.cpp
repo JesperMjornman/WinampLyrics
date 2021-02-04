@@ -37,27 +37,28 @@ api_service     *WASABI_API_SVC = 0;
 api_language    *WASABI_API_LNG = 0;
 api_application *WASABI_API_APP = 0;
 
-INT_PTR CALLBACK ChildWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ChildWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+void ResizeChildWnd(UINT w, UINT h);
 void GetAlbumLyrics(HWND hwnd);
+//std::wstring GetSongLyrics(HWND hwnd);
 
 HINSTANCE         WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
 embedWindowState  myWndState = { 0 };
 WNDPROC           lpWndProcOld = 0, lpWndProc = 0;
-HWND              embedWnd = NULL, childWnd = NULL, hwndInner = NULL;
+HWND              embedWnd = NULL, childWnd = NULL;
 HMENU             menu, context_menu;
 WCHAR*            ini_file;
 WCHAR             wa_path[MAX_PATH] = { 0 };
 UINT              LYRICS_MENUID, EMBEDWND_ID;
 std::atomic<int>  active_threads{};
 std::wstring      active_song;
+std::wstring	  active_song_lyrics; // Fix for usage of scrolling etc.
 std::mutex        album_mutex;
 LyricHandler      handler;
-bool              isActivated = true;
-COLORREF clrBackground     = RGB(0, 0, 0),
-		 clrCuePoint       = RGB(117, 116, 139),
-		 clrGeneratingText = RGB(0, 128, 0);
+bool              isEnabled = true;
+COLORREF          rgbBgColor;
 		 
 
 // Winamp PLUGIN specific funcs
@@ -84,9 +85,9 @@ winampGeneralPurposePlugin* getModule(int which)
 {
 	switch (which)
 	{
-	case 0: return &plugin;
+		case 0: return &plugin;
 
-	default:return NULL;
+		default:return NULL;
 	}
 }
 
@@ -105,21 +106,24 @@ LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 {	
 	HandleEmbeddedWindowWinampWindowMessages(embedWnd, EMBEDWND_ID, &myWndState, TRUE, hwnd, message, wParam, lParam);
 
-	if (message == WM_WA_IPC)
+	switch (message)
 	{
-		switch (message)
-		{
 		case WM_USER:
 		{
 			if (lParam == IPC_PLAYING_FILE)
 			{
-				if(active_threads < MAX_THREAD_COUNT)
+				if (isEnabled && active_threads < MAX_THREAD_COUNT)
 					std::thread(GetAlbumLyrics, hwnd).detach();
+			}
+			else if (lParam == IPC_FF_ONCOLORTHEMECHANGED)
+			{
+				InvalidateRect(childWnd, NULL, TRUE);
+				WADlg_init(hwnd);				
 			}
 			break;
 		}
-		}
 	}
+
 	LRESULT res = CallWindowProc(lpWndProcOld, hwnd, message, wParam, lParam);
 	HandleEmbeddedWindowWinampWindowMessages(embedWnd, EMBEDWND_ID, &myWndState, FALSE, hwnd, message, wParam, lParam);
 	return res;
@@ -141,6 +145,7 @@ void quit()
 
 int init()
 {
+	WADlg_init(plugin.hwndParent);
 	if (SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GETVERSION) < 0x5053)
 	{
 		MessageBoxA(plugin.hwndParent, "This plug-in requires Winamp v5.53 and up for it to work.\t\n"
@@ -196,7 +201,7 @@ int init()
 				WASABI_API_APP->app_addAccelerators(childWnd, &hAccel, 1, TRANSLATE_MODE_NORMAL);
 			}			
 
-			AddEmbeddedWindowToMenus(TRUE, EMBEDWND_ID, WASABI_API_LNGSTRINGW(IDS_PLUGIN_NAME), -1); // Change background colour based on skin.
+			AddEmbeddedWindowToMenus(TRUE, EMBEDWND_ID, WASABI_API_LNGSTRINGW(IDS_PLUGIN_NAME), -1);
 
 			return GEN_INIT_SUCCESS;
 		}
@@ -204,60 +209,78 @@ int init()
 	return 1;
 }
 
-INT_PTR CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
-	case IDC_REFRESH_BUTTON:
-	{
-		const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
-		wchar_t title[FILE_INFO_BUFFER_SIZE]{ 0 };
-		extendedFileInfoStructW FileInfo_s{
-			filename,
-			L"TITLE",
-			title,
-			FILE_INFO_BUFFER_SIZE,
-		};
-		SendMessage(hwnd, WM_WA_IPC, (WPARAM)&FileInfo_s, IPC_GET_EXTENDED_FILE_INFOW_HOOKABLE);
-		if (active_song != title)
+		case IDC_REFRESH_BUTTON:
 		{
-			GetAlbumLyrics(hwnd);
+			const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
+			wchar_t title[FILE_INFO_BUFFER_SIZE]{ 0 };
+			extendedFileInfoStructW FileInfo_s{
+				filename,
+				L"TITLE",
+				title,
+				FILE_INFO_BUFFER_SIZE,
+			};
+			SendMessage(hwnd, WM_WA_IPC, (WPARAM)&FileInfo_s, IPC_GET_EXTENDED_FILE_INFOW_HOOKABLE);
+			if (active_song != title)
+			{
+				GetAlbumLyrics(hwnd);
+			}
+			break;
 		}
-	}
-	case WM_VSCROLL:
-	{
-		SCROLLINFO scrollInfo;
-		scrollInfo.cbSize = sizeof(scrollInfo);
-		scrollInfo.fMask = SIF_ALL;
+		case WM_CTLCOLORDLG:
+		{
+			rgbBgColor = WADlg_getColor(WADLG_ITEMBG);
+			//SetDlgItemText(hwnd, IDC_LYRIC_STRING, L"TESTING 123");//hmm
+			return (INT_PTR)CreateSolidBrush(rgbBgColor);
+		}
+		case WM_CTLCOLORSTATIC:
+		{
+			HDC hdcStatic = (HDC)wParam;
+			SetTextColor(hdcStatic, WADlg_getColor(WADLG_SELBAR_FGCOLOR));
+			SetBkMode(hdcStatic, TRANSPARENT);
+			return (INT_PTR)CreateSolidBrush(rgbBgColor);
+		}
+		case WM_VSCROLL:
+		{
+			SCROLLINFO scrollInfo;
+			scrollInfo.cbSize = sizeof(scrollInfo);
+			scrollInfo.fMask = SIF_ALL;
 
-		GetScrollInfo(hwnd, SB_VERT, &scrollInfo);
-		int nPos = scrollInfo.nPos;
-		switch (LOWORD(wParam))
-		{
-		case SB_LINEDOWN:
-			nPos -= 1;
-			break;
-		case SB_LINEUP:
-			nPos += 1;
-			break;
-		case SB_PAGELEFT:
-			nPos -= scrollInfo.nPage;
-			break;
-		case SB_PAGERIGHT:
-			nPos += scrollInfo.nPage;
-			break;
-		case SB_THUMBTRACK:
-			nPos = scrollInfo.nTrackPos;
-			break;
-		default:
+			GetScrollInfo(hwnd, SB_VERT, &scrollInfo);
+			int nPos = scrollInfo.nPos;
+			switch (LOWORD(wParam))
+			{
+			case SB_LINEDOWN:
+				nPos -= 1;
+				break;
+			case SB_LINEUP:
+				nPos += 1;
+				break;
+			case SB_PAGELEFT:
+				nPos -= scrollInfo.nPage;
+				break;
+			case SB_PAGERIGHT:
+				nPos += scrollInfo.nPage;
+				break;
+			case SB_THUMBTRACK:
+				nPos = scrollInfo.nTrackPos;
+				break;
+			default:
+				break;
+			}		
 			break;
 		}
-		
-		break;
-	}
-	default: break;
+		default: break;
 	}
 	return HandleEmbeddedWindowChildMessages(embedWnd, EMBEDWND_ID, hwnd, message, wParam, lParam);
+}
+
+void ResizeChildWnd(UINT w, UINT h)
+{
+	
 }
 
 void GetAlbumLyrics(HWND hwnd)
@@ -297,7 +320,7 @@ void GetAlbumLyrics(HWND hwnd)
 			active_song = std::wstring(title);
 
 			int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
-			if (handler.GetSize() > 0)
+			if (handler.GetSize())
 			{				
 				const wchar_t* current{ handler[active_song].c_str() };
 				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current); 
