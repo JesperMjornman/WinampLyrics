@@ -5,7 +5,7 @@ C:\Users\46709\source\repos\WinampLyricsFinder\WinampLyricsFinder\embedwnd.cpp(1
 C:\Users\46709\source\repos\WinampLyricsFinder\WinampLyricsFinder\embedwnd.cpp(115,27): warning C4838: conversion from 'int' to 'UINT' requires a narrowing conversion
   WinampLyricsFinder.cpp
 E:\Program Files (x86)\Microsoft Visual Studio\Projects\DarkLyricsAPI\DarkLyricsAPI\lyricdecoder.h(117,25): warning C4018: '<': signed/unsigned mismatch
-C:\Users\46709\source\repos\WinampLyricsFinder\WinampLyricsFinder\WinampLyricsFinder.cpp(198,41): warning C4838: conversion from 'UINT' to 'WORD' requires a narrowing conversion
+C:\Users\46709\source\repos\WinampLyricsFinder\WinampLyricsFinder\WinampLyricsFinder.cpp(202,41): warning C4838: conversion from 'UINT' to 'WORD' requires a narrowing conversion
   Generating Code...
      Creating library C:\Program Files (x86)\Winamp\Plugins\gen_lyrics.lib and object C:\Program Files (x86)\Winamp\Plugins\gen_lyrics.exp
   WinampLyricsFinder.vcxproj -> C:\Program Files (x86)\Winamp\Plugins\gen_lyrics.dll

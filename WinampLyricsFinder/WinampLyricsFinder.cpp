@@ -44,21 +44,25 @@ void ResizeChildWnd(UINT w, UINT h);
 void GetAlbumLyrics(HWND hwnd);
 //std::wstring GetSongLyrics(HWND hwnd);
 
-HINSTANCE         WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
-embedWindowState  myWndState = { 0 };
-WNDPROC           lpWndProcOld = 0, lpWndProc = 0;
-HWND              embedWnd = NULL, childWnd = NULL;
-HMENU             menu, context_menu;
-WCHAR*            ini_file;
-WCHAR             wa_path[MAX_PATH] = { 0 };
-UINT              LYRICS_MENUID, EMBEDWND_ID;
-std::atomic<int>  active_threads{};
-std::wstring      active_song;
-std::wstring	  active_song_lyrics; // Fix for usage of scrolling etc.
-std::mutex        album_mutex;
-LyricHandler      handler;
-bool              isEnabled = true;
-COLORREF          rgbBgColor;
+HINSTANCE           WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
+embedWindowState    myWndState = { 0 };
+WNDPROC             lpWndProcOld = 0, lpWndProc = 0;
+HWND                embedWnd = NULL, childWnd = NULL;
+HMENU               menu, context_menu;
+WCHAR*              ini_file;
+WCHAR               wa_path[MAX_PATH] = { 0 };
+UINT                LYRICS_MENUID, EMBEDWND_ID;
+std::atomic<int>    active_threads{};
+std::wstring        active_song;
+std::wstring	    active_song_lyrics; // Fix for usage of scrolling etc.
+std::mutex          album_mutex;
+std::pair<unsigned, 
+		  unsigned> buttonOffset{ 65, 25 };
+std::pair<unsigned,
+		  unsigned> lyricStringSize{ 192, 330 };
+LyricHandler        handler;
+bool                isEnabled = true;
+COLORREF            rgbBgColor;
 		 
 
 // Winamp PLUGIN specific funcs
@@ -218,12 +222,14 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		{
 			const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
 			wchar_t title[FILE_INFO_BUFFER_SIZE]{ 0 };
-			extendedFileInfoStructW FileInfo_s{
+			extendedFileInfoStructW FileInfo_s
+			{
 				filename,
 				L"TITLE",
 				title,
 				FILE_INFO_BUFFER_SIZE,
 			};
+
 			SendMessage(hwnd, WM_WA_IPC, (WPARAM)&FileInfo_s, IPC_GET_EXTENDED_FILE_INFOW_HOOKABLE);
 			if (active_song != title)
 			{
@@ -234,7 +240,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		case WM_CTLCOLORDLG:
 		{
 			rgbBgColor = WADlg_getColor(WADLG_ITEMBG);
-			SetDlgItemText(hwnd, IDC_LYRIC_STRING, active_song_lyrics.c_str());//hmm
+			SetDlgItemText(hwnd, IDC_LYRIC_STRING, active_song_lyrics.c_str());
 			return (INT_PTR)CreateSolidBrush(rgbBgColor);
 		}
 		case WM_CTLCOLORSTATIC:
@@ -274,6 +280,29 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			}		
 			break;
 		}
+		case WM_SIZE: 
+		{						
+			SetWindowPos(
+				GetDlgItem(hwnd, IDC_REFRESH_BUTTON), 
+				0, 
+				LOWORD(lParam) - buttonOffset.first, 
+				HIWORD(lParam) - buttonOffset.second, 
+				0, 
+				0, 
+				SWP_NOSIZE);
+			
+			SetWindowPos(
+				GetDlgItem(hwnd, IDC_LYRIC_STRING),
+				0,
+				0,
+				0,
+				LOWORD(lParam),
+				HIWORD(lParam) - buttonOffset.second - 5,
+				SWP_NOMOVE);
+			
+			//RedrawWindow(childWnd, NULL, NULL, RDW_INVALIDATE | RDW_NOERASE | RDW_INTERNALPAINT);
+			break;
+		}
 		default: break;
 	}
 	return HandleEmbeddedWindowChildMessages(embedWnd, EMBEDWND_ID, hwnd, message, wParam, lParam);
@@ -284,9 +313,9 @@ void ResizeChildWnd(UINT w, UINT h)
 	
 }
 
-void GetAlbumLyrics(HWND hwnd)
+void GetAlbumLyrics(HWND hwnd) // Fix to auto re-size on song lyrics length.
 {
-	while (!album_mutex.try_lock()) { Sleep(10); } // Could be circumvented with a global thread.
+	while (!album_mutex.try_lock()) { Sleep(10); }
 	const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
 	wchar_t active_song_artist[FILE_INFO_BUFFER_SIZE]{ 0 }, active_song_album[FILE_INFO_BUFFER_SIZE]{ 0 }, title[FILE_INFO_BUFFER_SIZE]{ 0 };
 
@@ -316,8 +345,8 @@ void GetAlbumLyrics(HWND hwnd)
 
 		try
 		{
-			handler.GetLyrics(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), LyricsUtil::DarkLyricsDecoder);
-			//LyricsUtil::DarkLyricsDecoder(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), album);
+			handler.GetLyrics(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), LyricsUtil::DarkLyricsDecoder); // Temporary
+
 			active_song = std::wstring(title);
 
 			int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
