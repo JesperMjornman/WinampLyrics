@@ -58,8 +58,6 @@ std::wstring	    active_song_lyrics; // Fix for usage of scrolling etc.
 std::mutex          album_mutex;
 std::pair<unsigned, 
 		  unsigned> buttonOffset{ 65, 25 };
-std::pair<unsigned,
-		  unsigned> lyricStringSize{ 192, 330 };
 LyricHandler        handler;
 bool                isEnabled = true;
 COLORREF            rgbBgColor;
@@ -337,34 +335,36 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto re-size on song lyrics length.
 
 	if (active_song != title)
 	{
-		if (handler.GetAlbum().name == active_song_album)
-		{
-			const wchar_t* current{ handler[active_song].c_str() };
-			SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
-		}
-
 		try
 		{
-			handler.GetLyrics(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), LyricsUtil::DarkLyricsDecoder); // Temporary
-
-			active_song = std::wstring(title);
-
-			int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
-			if (handler.GetSize())
-			{				
-				active_song_lyrics = handler[active_song];
-				const wchar_t* current{ active_song_lyrics.c_str() };
-				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current); 
+			if (handler.GetAlbum().name == active_song_album)
+			{
+				const wchar_t* current{ handler[active_song].c_str() };
+				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
 			}
 			else
-			{			
-				SetDlgItemText(childWnd, IDC_LYRIC_STRING, L"Lyrics not found.");
+			{
+				handler.GetLyrics(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), LyricsUtil::DarkLyricsDecoder); // Temporary
+
+				active_song = std::wstring(title);
+
+				int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
+				if (handler.GetSize())
+				{
+					active_song_lyrics = handler[active_song];
+					const wchar_t* current{ active_song_lyrics.c_str() };
+					SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
+				}
+				else
+				{
+					SetDlgItemText(childWnd, IDC_LYRIC_STRING, L"Lyrics not found.");
+				}
 			}
 		}
 		catch (std::exception& e)
 		{
 			MessageBoxA(hwnd, e.what(), "EXCEPTION THROWN", MB_OK);
-		}
+		}	
 	}
 	album_mutex.unlock(); // Unlock.
 	--active_threads;
