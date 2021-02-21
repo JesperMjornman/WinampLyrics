@@ -1,4 +1,3 @@
-// dllmain.cpp : Defines the entry point for the DLL application.
 #include "E:\Program Files (x86)\Microsoft Visual Studio\Projects\DarkLyricsAPI\DarkLyricsAPI\lyrichandler.h"
 #include <Windows.h>
 #include <strsafe.h>
@@ -30,8 +29,7 @@
 #define MAX_THREAD_COUNT 1
 
 static const GUID wndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
-static const GUID GenEmbedWndExampleLangGUID =
-{ 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
+static const GUID wndLangGUID =  { 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
 
 api_service     *WASABI_API_SVC = 0;
 api_language    *WASABI_API_LNG = 0;
@@ -57,8 +55,8 @@ std::mutex          album_mutex;
 std::pair<unsigned, 
 		  unsigned> buttonOffset{ 65, 25 };
 LyricHandler        handler;
-bool                isEnabled = true, isColorChanged = false;
 COLORREF            rgbBgColor;
+bool                isEnabled = true, isColorChanged = false;
 
 // Winamp PLUGIN specific funcs
 void config();
@@ -162,7 +160,7 @@ int init()
 		if (WASABI_API_SVC)
 		{
 			ServiceBuild(WASABI_API_LNG, languageApiGUID);
-			WASABI_API_START_LANG(plugin.hDllInstance, GenEmbedWndExampleLangGUID);
+			WASABI_API_START_LANG(plugin.hDllInstance, wndLangGUID);
 
 			static char szDescription[256]; 
 			StringCchPrintfA(szDescription, 256, WASABI_API_LNGSTRING(IDS_LANGUAGE_EXAMPLE), PLUGIN_VERSION);
@@ -309,8 +307,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 				LOWORD(lParam),
 				HIWORD(lParam) - buttonOffset.second - 5,
 				SWP_NOMOVE);
-			
-			//RedrawWindow(childWnd, NULL, NULL, RDW_INVALIDATE | RDW_NOERASE | RDW_INTERNALPAINT);
+
 			break;
 		}
 		default: break;
