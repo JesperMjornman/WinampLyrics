@@ -42,7 +42,6 @@ LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 
 void ResizeChildWnd(UINT w, UINT h);
 void GetAlbumLyrics(HWND hwnd);
-//std::wstring GetSongLyrics(HWND hwnd);
 
 HINSTANCE           WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
 embedWindowState    myWndState = { 0 };
@@ -53,15 +52,13 @@ WCHAR*              ini_file;
 WCHAR               wa_path[MAX_PATH] = { 0 };
 UINT                LYRICS_MENUID, EMBEDWND_ID;
 std::atomic<int>    active_threads{};
-std::wstring        active_song;
-std::wstring	    active_song_lyrics; // Fix for usage of scrolling etc.
+std::wstring        active_song, active_song_lyrics;
 std::mutex          album_mutex;
 std::pair<unsigned, 
 		  unsigned> buttonOffset{ 65, 25 };
 LyricHandler        handler;
-bool                isEnabled = true;
+bool                isEnabled = true, isColorChanged = false;
 COLORREF            rgbBgColor;
-		 
 
 // Winamp PLUGIN specific funcs
 void config();
@@ -237,8 +234,20 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		}
 		case WM_CTLCOLORDLG:
 		{
-			rgbBgColor = WADlg_getColor(WADLG_ITEMBG);
-			SetDlgItemText(hwnd, IDC_LYRIC_STRING, active_song_lyrics.c_str());
+			COLORREF newColor = WADlg_getColor(WADLG_ITEMBG);
+			/*
+			 * Avoids updating colors if no change is made. 
+			 * This avoids stuttering as the label is constantly re-drawn.
+			 * Will, on update, re-set the static label content as a color change will
+			 * not re-draw the label but draw "over" it. As such it will be run twice after
+			 * updating any set color.
+			 */
+			if (isColorChanged || rgbBgColor != newColor) 
+			{
+				rgbBgColor = newColor;
+				SetDlgItemText(hwnd, IDC_LYRIC_STRING, active_song_lyrics.c_str());	
+				isColorChanged = !isColorChanged;
+			}
 			return (INT_PTR)CreateSolidBrush(rgbBgColor);
 		}
 		case WM_CTLCOLORSTATIC:
@@ -279,7 +288,8 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			break;
 		}
 		case WM_SIZE: 
-		{						
+		{		
+			// Move button on re-size
 			SetWindowPos(
 				GetDlgItem(hwnd, IDC_REFRESH_BUTTON), 
 				0, 
@@ -289,6 +299,8 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 				0, 
 				SWP_NOSIZE);
 			
+			// Re-size lyrics label to fill window
+			// Will not fill over or below the refresh button but stops 5px above.
 			SetWindowPos(
 				GetDlgItem(hwnd, IDC_LYRIC_STRING),
 				0,
@@ -315,7 +327,9 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto re-size on song lyrics length.
 {
 	while (!album_mutex.try_lock()) { Sleep(10); }
 	const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
-	wchar_t active_song_artist[FILE_INFO_BUFFER_SIZE]{ 0 }, active_song_album[FILE_INFO_BUFFER_SIZE]{ 0 }, title[FILE_INFO_BUFFER_SIZE]{ 0 };
+	wchar_t active_song_artist[FILE_INFO_BUFFER_SIZE]{ 0 }, 
+			active_song_album[FILE_INFO_BUFFER_SIZE]{ 0 }, 
+			title[FILE_INFO_BUFFER_SIZE]{ 0 };
 
 	extendedFileInfoStructW FileInfo_s{
 		filename,
