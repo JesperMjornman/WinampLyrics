@@ -235,9 +235,9 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			COLORREF newColor = WADlg_getColor(WADLG_ITEMBG);
 			/*
 			 * Avoids updating colors if no change is made. 
-			 * This avoids stuttering as the label is constantly re-drawn.
-			 * Will, on update, re-set the static label content as a color change will
-			 * not re-draw the label but draw "over" it. As such it will be run twice after
+			 * This avoids stuttering as the label is constantly redrawn.
+			 * Will, on update, reset the static label content as a color change will
+			 * not redraw the label but draw "over" it. As such it will be run twice after
 			 * updating any set color.
 			 */
 			if (isColorChanged || rgbBgColor != newColor) 
@@ -287,7 +287,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		}
 		case WM_SIZE: 
 		{		
-			// Move button on re-size
+			// Move button on resize
 			SetWindowPos(
 				GetDlgItem(hwnd, IDC_REFRESH_BUTTON), 
 				0, 
@@ -297,7 +297,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 				0, 
 				SWP_NOSIZE);
 			
-			// Re-size lyrics label to fill window
+			// Resize lyrics label to fill window
 			// Will not fill over or below the refresh button but stops 5px above.
 			SetWindowPos(
 				GetDlgItem(hwnd, IDC_LYRIC_STRING),
@@ -320,7 +320,7 @@ void ResizeChildWnd(UINT w, UINT h)
 	
 }
 
-void GetAlbumLyrics(HWND hwnd) // Fix to auto re-size on song lyrics length.
+void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 {
 	while (!album_mutex.try_lock()) { Sleep(10); }
 	const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
