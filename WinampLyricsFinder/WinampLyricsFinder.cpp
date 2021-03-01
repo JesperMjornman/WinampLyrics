@@ -255,7 +255,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			SetBkMode(hdcStatic, TRANSPARENT);
 			return (INT_PTR)CreateSolidBrush(rgbBgColor);
 		}
-		case WM_VSCROLL:
+		case WM_VSCROLL: // not yet implemented
 		{
 			SCROLLINFO scrollInfo;
 			scrollInfo.cbSize = sizeof(scrollInfo);
@@ -298,7 +298,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 				SWP_NOSIZE);
 			
 			// Resize lyrics label to fill window
-			// Will not fill over or below the refresh button but stops 5px above.
+			// Will not fill over or below the refresh button but stops 5px above it.
 			SetWindowPos(
 				GetDlgItem(hwnd, IDC_LYRIC_STRING),
 				0,
