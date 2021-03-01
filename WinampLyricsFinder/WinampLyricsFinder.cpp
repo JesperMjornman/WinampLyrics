@@ -49,8 +49,8 @@ HMENU               menu, context_menu;
 WCHAR*              ini_file;
 WCHAR               wa_path[MAX_PATH] = { 0 };
 UINT                LYRICS_MENUID, EMBEDWND_ID;
-std::atomic<int>    active_threads{};
-std::wstring        active_song, active_song_lyrics;
+std::atomic<int>    activeThreads{};
+std::wstring        activeSong, activeSongLyrics;
 std::mutex          album_mutex;
 std::pair<unsigned, 
 		  unsigned> buttonOffset{ 65, 25 };
@@ -109,7 +109,7 @@ LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 		{
 			if (lParam == IPC_PLAYING_FILE)
 			{
-				if (isEnabled && active_threads < MAX_THREAD_COUNT)
+				if (isEnabled && activeThreads < MAX_THREAD_COUNT)
 					std::thread(GetAlbumLyrics, hwnd).detach();
 			}
 			else if (lParam == IPC_FF_ONCOLORTHEMECHANGED)
@@ -224,7 +224,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			};
 
 			SendMessage(hwnd, WM_WA_IPC, (WPARAM)&FileInfo_s, IPC_GET_EXTENDED_FILE_INFOW_HOOKABLE);
-			if (active_song != title)
+			if (activeSong != title)
 			{
 				GetAlbumLyrics(hwnd);
 			}
@@ -243,7 +243,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			if (isColorChanged || rgbBgColor != newColor) 
 			{
 				rgbBgColor = newColor;
-				SetDlgItemText(hwnd, IDC_LYRIC_STRING, active_song_lyrics.c_str());	
+				SetDlgItemText(hwnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());	
 				isColorChanged = !isColorChanged;
 			}
 			return (INT_PTR)CreateSolidBrush(rgbBgColor);
@@ -324,46 +324,46 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 {
 	while (!album_mutex.try_lock()) { Sleep(10); }
 	const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
-	wchar_t active_song_artist[FILE_INFO_BUFFER_SIZE]{ 0 }, 
-			active_song_album[FILE_INFO_BUFFER_SIZE]{ 0 }, 
+	wchar_t activeSongArtist[FILE_INFO_BUFFER_SIZE]{ 0 }, 
+			activeSongAlbum[FILE_INFO_BUFFER_SIZE]{ 0 }, 
 			title[FILE_INFO_BUFFER_SIZE]{ 0 };
 
 	extendedFileInfoStructW FileInfo_s{
 		filename,
 		L"ALBUM", //L"%artist% - %title% - %playcount% - %test%",
-		active_song_album,
+		activeSongAlbum,
 		FILE_INFO_BUFFER_SIZE,
 	};
 	SendMessage(hwnd, WM_WA_IPC, (WPARAM)&FileInfo_s, IPC_GET_EXTENDED_FILE_INFOW_HOOKABLE);
 
 	FileInfo_s.metadata = L"ARTIST";
-	FileInfo_s.ret = active_song_artist;
+	FileInfo_s.ret = activeSongArtist;
 	SendMessage(hwnd, WM_WA_IPC, (WPARAM)&FileInfo_s, IPC_GET_EXTENDED_FILE_INFOW_HOOKABLE);
 
 	FileInfo_s.metadata = L"TITLE";
 	FileInfo_s.ret = title;
 	SendMessage(hwnd, WM_WA_IPC, (WPARAM)&FileInfo_s, IPC_GET_EXTENDED_FILE_INFOW_HOOKABLE);
 
-	if (active_song != title)
+	if (activeSong != title)
 	{
 		try
 		{
-			if (handler.GetAlbum().name == active_song_album)
+			if (handler.GetAlbum().name == activeSongAlbum)
 			{
-				const wchar_t* current{ handler[active_song].c_str() };
+				const wchar_t* current{ handler[activeSong].c_str() };
 				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
 			}
 			else
 			{
-				handler.GetLyrics(LyricsUtil::WstringToUTF8(active_song_artist), LyricsUtil::WstringToUTF8(active_song_album), LyricsUtil::DarkLyricsDecoder); // Temporary
+				handler.GetLyrics(LyricsUtil::WstringToUTF8(activeSongArtist), LyricsUtil::WstringToUTF8(activeSongAlbum), LyricsUtil::DarkLyricsDecoder); // Temporary
 
-				active_song = std::wstring(title);
+				activeSong = std::wstring(title);
 
 				int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
 				if (handler.GetSize())
 				{
-					active_song_lyrics = handler[active_song];
-					const wchar_t* current{ active_song_lyrics.c_str() };
+					activeSongLyrics = handler[activeSong];
+					const wchar_t* current{ activeSongLyrics.c_str() };
 					SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
 				}
 				else
@@ -378,5 +378,5 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 		}	
 	}
 	album_mutex.unlock(); // Unlock.
-	--active_threads;
+	--activeThreads;
 }
