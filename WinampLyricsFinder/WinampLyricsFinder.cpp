@@ -355,7 +355,7 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 			}
 			else
 			{
-				handler.GetLyrics(LyricsUtil::WstringToUTF8(activeSongArtist), LyricsUtil::WstringToUTF8(activeSongAlbum), LyricsUtil::DarkLyricsDecoder); // Temporary
+				handler.GetLyrics(LyricsUtil::WstringToUTF8(activeSongArtist), LyricsUtil::WstringToUTF8(activeSongAlbum), LyricsUtil::TryDecode); // Temporary
 
 				activeSong = std::wstring(title);
 
