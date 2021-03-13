@@ -236,7 +236,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			/*
 			 * Avoids updating colors if no change is made. 
 			 * This avoids stuttering as the label is constantly redrawn.
-			 * Will, on update, reset the static label content as a color change will
+			 * Will on update, reset the static label content as a color change will
 			 * not redraw the label but draw "over" it. As such it will be run twice after
 			 * updating any set color.
 			 */
@@ -257,7 +257,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		}
 		case WM_VSCROLL: // not yet implemented
 		{
-			SCROLLINFO scrollInfo;
+			SCROLLINFO scrollInfo{};
 			scrollInfo.cbSize = sizeof(scrollInfo);
 			scrollInfo.fMask = SIF_ALL;
 
@@ -350,7 +350,8 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 			if (handler.GetAlbum().name == activeSongAlbum)
 			{
 				activeSong = ToLower(std::wstring(title));
-				const wchar_t* current{ handler[activeSong].c_str() };				
+				activeSongLyrics = handler[activeSong];
+				const wchar_t* current{ activeSongLyrics.c_str() };
 				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
 			}
 			else
