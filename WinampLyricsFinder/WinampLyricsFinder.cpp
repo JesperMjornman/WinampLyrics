@@ -343,21 +343,20 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 	FileInfo_s.metadata = L"TITLE";
 	FileInfo_s.ret = title;
 	SendMessage(hwnd, WM_WA_IPC, (WPARAM)&FileInfo_s, IPC_GET_EXTENDED_FILE_INFOW_HOOKABLE);
-
 	if (activeSong != title)
 	{
 		try
-		{
+		{			
 			if (handler.GetAlbum().name == activeSongAlbum)
 			{
-				const wchar_t* current{ handler[activeSong].c_str() };
+				activeSong = ToLower(std::wstring(title));
+				const wchar_t* current{ handler[activeSong].c_str() };				
 				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
 			}
 			else
 			{
-				handler.GetLyrics(LyricsUtil::WstringToUTF8(activeSongArtist), LyricsUtil::WstringToUTF8(activeSongAlbum), LyricsUtil::TryDecode); // Temporary
-
-				activeSong = std::wstring(title);
+				handler.GetLyrics(LyricsUtil::WstringToUTF8(activeSongArtist), LyricsUtil::WstringToUTF8(activeSongAlbum), LyricsUtil::TryDecode); // Temporary			
+				activeSong = ToLower(std::wstring(title));
 
 				int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
 				if (handler.GetSize())
