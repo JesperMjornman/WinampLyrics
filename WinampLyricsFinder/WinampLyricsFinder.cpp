@@ -40,6 +40,9 @@ LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 
 void ResizeChildWnd(UINT w, UINT h);
 void GetAlbumLyrics(HWND hwnd);
+int  CompareWstringValidCharacters(const std::wstring& a,
+								   const std::wstring& b,
+								   const std::wstring valid = L"abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ123456789-_@& ");
 
 HINSTANCE           WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
 embedWindowState    myWndState = { 0 };
@@ -347,24 +350,22 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 	{
 		try
 		{			
-			if (handler.GetAlbum().name == activeSongAlbum)
-			{
+			if (CompareWstringValidCharacters(handler.GetAlbum().name, std::wstring(activeSongAlbum)))
+			{				
 				activeSong = ToLower(std::wstring(title));
 				activeSongLyrics = handler[activeSong];
-				const wchar_t* current{ activeSongLyrics.c_str() };
-				SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
+				SetDlgItemText(childWnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());
 			}
 			else
 			{
-				handler.GetLyrics(LyricsUtil::WstringToUTF8(activeSongArtist), LyricsUtil::WstringToUTF8(activeSongAlbum), LyricsUtil::TryDecode); // Temporary			
+				handler.GetLyrics(LyricsUtil::WstringToUTF8(activeSongArtist), LyricsUtil::WstringToUTF8(activeSongAlbum), LyricsUtil::TryDecode);		
 				activeSong = ToLower(std::wstring(title));
 
 				int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
 				if (handler.GetSize())
 				{
 					activeSongLyrics = handler[activeSong];
-					const wchar_t* current{ activeSongLyrics.c_str() };
-					SetDlgItemText(childWnd, IDC_LYRIC_STRING, current);
+					SetDlgItemText(childWnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());				
 				}
 				else
 				{
@@ -379,4 +380,17 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 	}
 	album_mutex.unlock(); // Unlock.
 	--activeThreads;
+}
+
+inline int CompareWstringValidCharacters(const std::wstring& a, const std::wstring& b, const std::wstring args)
+{
+	size_t index_a{ a.find_first_not_of(args) }, index_b{ b.find_first_not_of(args) };
+	if (index_a != std::wstring::npos && index_b != std::wstring::npos)
+	{
+		return a.substr(0, index_a) == b.substr(0, index_b);
+	}	
+	else
+	{
+		return a == b;
+	}
 }
