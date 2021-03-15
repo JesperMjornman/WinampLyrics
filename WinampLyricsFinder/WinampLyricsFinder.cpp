@@ -1,4 +1,4 @@
-#include "E:\Program Files (x86)\Microsoft Visual Studio\Projects\DarkLyricsAPI\DarkLyricsAPI\lyrichandler.h"
+#include <lib/lyrichandler.h>
 #include <Windows.h>
 #include <strsafe.h>
 #include <string>
