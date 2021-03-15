@@ -27,6 +27,7 @@
 #define PLUGIN_VERSION "v1.0"
 #define FILE_INFO_BUFFER_SIZE 128
 #define MAX_THREAD_COUNT 1
+#define VALID_ALBUM_CHARACTERS L"abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ123456789-_@$£&'\" "
 
 static const GUID wndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
 static const GUID wndLangGUID =  { 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
@@ -42,7 +43,7 @@ void ResizeChildWnd(UINT w, UINT h);
 void GetAlbumLyrics(HWND hwnd);
 int  CompareWstringValidCharacters(const std::wstring& a,
 								   const std::wstring& b,
-								   const std::wstring valid = L"abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ123456789-_@& ");
+								   const std::wstring valid = VALID_ALBUM_CHARACTERS);
 
 HINSTANCE           WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
 embedWindowState    myWndState = { 0 };
@@ -382,15 +383,12 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 	--activeThreads;
 }
 
+// Simple solution to characters not matching in Album.
 inline int CompareWstringValidCharacters(const std::wstring& a, const std::wstring& b, const std::wstring args)
 {
 	size_t index_a{ a.find_first_not_of(args) }, index_b{ b.find_first_not_of(args) };
 	if (index_a != std::wstring::npos && index_b != std::wstring::npos)
-	{
 		return a.substr(0, index_a) == b.substr(0, index_b);
-	}	
 	else
-	{
 		return a == b;
-	}
 }
