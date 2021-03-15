@@ -10,4 +10,7 @@ Supports:
 
 TODO:
 - [ ] Make child window scrollable.
-- [ ] Extend LyricsAPI to fetch from more sources.
+- [x] Extend LyricsAPI to fetch from more sources.
+ * darklyrics.com
+ * songlyrics.com
+- [ ] Fix all bugs
