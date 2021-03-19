@@ -1,4 +1,6 @@
 #include <lib/lyrichandler.h>
+#include <lib/utility.h>
+#include <lib/decoder.h>
 #include <Windows.h>
 #include <strsafe.h>
 #include <string>
@@ -27,10 +29,14 @@
 #define PLUGIN_VERSION "v1.0"
 #define FILE_INFO_BUFFER_SIZE 128
 #define MAX_THREAD_COUNT 1
+#define LYRICS_LABEL_TOP 0
 #define VALID_ALBUM_CHARACTERS L"abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ123456789-_@$£&'\" "
 
 static const GUID wndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
 static const GUID wndLangGUID =  { 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
+
+const std::pair<unsigned,
+				unsigned> BUTTON_OFFSET{ 0, 0/*65, 25*/ };
 
 api_service     *WASABI_API_SVC = 0;
 api_language    *WASABI_API_LNG = 0;
@@ -56,11 +62,10 @@ UINT                LYRICS_MENUID, EMBEDWND_ID;
 std::atomic<int>    activeThreads{};
 std::wstring        activeSong, activeSongLyrics;
 std::mutex          album_mutex;
-std::pair<unsigned, 
-		  unsigned> buttonOffset{ 65, 25 };
 LyricHandler        handler;
 COLORREF            rgbBgColor;
 bool                isEnabled = true, isColorChanged = false;
+int                 iCurrentLineScrolled = 0;
 
 // Winamp PLUGIN specific funcs
 void config();
@@ -259,34 +264,37 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			SetBkMode(hdcStatic, TRANSPARENT);
 			return (INT_PTR)CreateSolidBrush(rgbBgColor);
 		}
-		case WM_VSCROLL: // not yet implemented
+		case WM_MOUSEWHEEL:
 		{
-			SCROLLINFO scrollInfo{};
-			scrollInfo.cbSize = sizeof(scrollInfo);
-			scrollInfo.fMask = SIF_ALL;
+			short zDelta   = GET_WHEEL_DELTA_WPARAM(wParam);
+			HWND hwndLabel = GetDlgItem(hwnd, IDC_LYRIC_STRING);
+			RECT rect{}, windowRect{};
 
-			GetScrollInfo(hwnd, SB_VERT, &scrollInfo);
-			int nPos = scrollInfo.nPos;
-			switch (LOWORD(wParam))
-			{
-			case SB_LINEDOWN:
-				nPos -= 1;
-				break;
-			case SB_LINEUP:
-				nPos += 1;
-				break;
-			case SB_PAGELEFT:
-				nPos -= scrollInfo.nPage;
-				break;
-			case SB_PAGERIGHT:
-				nPos += scrollInfo.nPage;
-				break;
-			case SB_THUMBTRACK:
-				nPos = scrollInfo.nTrackPos;
-				break;
-			default:
-				break;
-			}		
+			// Get Label Size.
+			GetWindowRect(hwndLabel, &rect);
+			MapWindowPoints(HWND_DESKTOP, hwnd, (LPPOINT)&rect, 2);
+			
+			//
+			GetWindowRect(hwnd, &windowRect);
+			unsigned uHeightOfWindow = windowRect.bottom - windowRect.top;
+
+			std::pair<std::wstring, bool> interval = handler.GetInterval(activeSong, iCurrentLineScrolled, rect.bottom / 12);
+			if (zDelta > 0 && iCurrentLineScrolled > 0) // Save to make it easy later, saving if top or bottom scrolled.
+			{					
+				activeSongLyrics = interval.first;
+				--iCurrentLineScrolled;
+				SetDlgItemText(childWnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());
+			}
+			else if (zDelta < 0)
+			{					
+				if (!interval.second)
+				{
+					activeSongLyrics = interval.first;
+					++iCurrentLineScrolled;
+					SetDlgItemText(childWnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());
+				}
+			}
+			
 			break;
 		}
 		case WM_SIZE: 
@@ -295,8 +303,8 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			SetWindowPos(
 				GetDlgItem(hwnd, IDC_REFRESH_BUTTON), 
 				0, 
-				LOWORD(lParam) - buttonOffset.first, 
-				HIWORD(lParam) - buttonOffset.second, 
+				LOWORD(lParam) - BUTTON_OFFSET.first, 
+				HIWORD(lParam) - BUTTON_OFFSET.second, 
 				0, 
 				0, 
 				SWP_NOSIZE);
@@ -309,7 +317,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 				0,
 				0,
 				LOWORD(lParam),
-				HIWORD(lParam) - buttonOffset.second - 5,
+				HIWORD(lParam) - BUTTON_OFFSET.second - 5,
 				SWP_NOMOVE);
 
 			break;
@@ -317,11 +325,6 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		default: break;
 	}
 	return HandleEmbeddedWindowChildMessages(embedWnd, EMBEDWND_ID, hwnd, message, wParam, lParam);
-}
-
-void ResizeChildWnd(UINT w, UINT h)
-{
-	
 }
 
 void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
@@ -362,7 +365,7 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 				handler.GetLyrics(LyricsUtil::WstringToUTF8(activeSongArtist), LyricsUtil::WstringToUTF8(activeSongAlbum), LyricsUtil::TryDecode);		
 				activeSong = ToLower(std::wstring(title));
 
-				int success = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
+				int iCompareStr = lstrcmpW(handler.GetAlbum().name.c_str(), L"failed");
 				if (handler.GetSize())
 				{
 					activeSongLyrics = handler[activeSong];

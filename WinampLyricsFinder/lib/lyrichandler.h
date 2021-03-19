@@ -68,6 +68,8 @@ public:
 	std::wstring& operator[](const wchar_t* s);
 	std::wstring& operator[](const char* s);
 
+	const std::pair<std::wstring, bool> GetInterval(const std::wstring& song, const int start, const int count) const;
+
 	const LyricsUtil::Album& GetAlbum() const noexcept;
 	const size_t GetSize() const noexcept;
 	const int GetLineCount(const std::string& s)  const noexcept;
