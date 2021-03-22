@@ -22,4 +22,4 @@ Some known bugs:
 ## Visuals
 Supports visuals from Winamp modern with different color schemes.
 
-![LyricWindow](resource/winamp_picture)
+![LyricWindow](resource/winamp_picture.png)
