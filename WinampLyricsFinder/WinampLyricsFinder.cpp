@@ -45,7 +45,6 @@ api_application *WASABI_API_APP = 0;
 LRESULT CALLBACK ChildWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-void ResizeChildWnd(UINT w, UINT h);
 void GetAlbumLyrics(HWND hwnd);
 int  CompareWstringValidCharacters(const std::wstring& a,
 								   const std::wstring& b,
