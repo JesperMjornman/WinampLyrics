@@ -23,7 +23,8 @@ public:
 	 * Constructor
 	 */
 	LyricHandler();
-	
+	~LyricHandler() {};
+
 	/**
 	 * Fetch lyrics of "artist" and "album" through any given function pointer. 
 	 * Note that the given decoder also serves as the handler for fetching lyrics.
@@ -68,10 +69,22 @@ public:
 	std::wstring& operator[](const wchar_t* s);
 	std::wstring& operator[](const char* s);
 
+	/** 
+	 * Gets a line interval of a fetched song.
+	 * Reads from `start` a count of `count` lines.
+	 */
 	const std::pair<std::wstring, bool> GetInterval(const std::wstring& song, const int start, const int count) const;
+
 
 	const LyricsUtil::Album& GetAlbum() const noexcept;
 	const size_t GetSize() const noexcept;
+
+	/**
+	 * Gets the number of lines of lyrics in the given song.
+	 * 
+	 * @param s - Song name that exists in the fetched album
+	 * @returns The number of lines in the lyric string
+	 */
 	const int GetLineCount(const std::string& s)  const noexcept;
 	const int GetLineCount(const std::wstring& s) const noexcept;
 
