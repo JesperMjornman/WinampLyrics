@@ -265,6 +265,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		}
 		case WM_MOUSEWHEEL:
 		{
+#ifdef ENABLE_SCROLLING
 			short zDelta   = GET_WHEEL_DELTA_WPARAM(wParam);
 			HWND hwndLabel = GetDlgItem(hwnd, IDC_LYRIC_STRING);
 			RECT rect{}, windowRect{};
@@ -286,14 +287,14 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			}
 			else if (zDelta < 0)
 			{					
-				if (!interval.second)
+				//if (!interval.second)
 				{
 					activeSongLyrics = interval.first;
 					++iCurrentLineScrolled;
 					SetDlgItemText(childWnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());
 				}
 			}
-			
+#endif			
 			break;
 		}
 		case WM_SIZE: 
