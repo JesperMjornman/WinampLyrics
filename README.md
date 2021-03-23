@@ -9,7 +9,8 @@ Supports:
    - Changes color based on theme
 
 TODO:
-- [x] Make child window scrollable.
+- [ ] Make child window scrollable.
+  - Is unstable if enabled.
 - [x] Extend LyricsAPI to fetch from more sources.
  * darklyrics.com
  * songlyrics.com
