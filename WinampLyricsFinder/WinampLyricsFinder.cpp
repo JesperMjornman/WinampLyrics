@@ -17,6 +17,7 @@
 #include "embedwnd.h"
 #include "resource.h"
 
+#include <rpcdce.h>
 #include <Agave\Language\api_language.h>
 #include <Agave\Language\lang.h>
 #include <Winamp\wa_ipc.h>
@@ -34,9 +35,8 @@
 #define VALID_ALBUM_CHARACTERS L"abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ123456789-_@$£&'\" "
 #define SETTINGS_FILE_PATH ".\\Plugins\\LyricsFinder\\options.txt"
 
-static const GUID wndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
-static const GUID wndStateOptionsGUID = { 0x3fcd6a41, 0x95d3, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
-static const GUID wndLangGUID =  { 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
+const static GUID wndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
+const static GUID wndLangGUID  = { 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
 
 const std::pair<unsigned,
 				unsigned> BUTTON_OFFSET{ 0, 0/*65, 25*/ };
@@ -45,8 +45,8 @@ api_service     *WASABI_API_SVC = 0;
 api_language    *WASABI_API_LNG = 0;
 api_application *WASABI_API_APP = 0;
 
-LRESULT CALLBACK ChildWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ChildWndProc    (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WaWndProc       (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 BOOL    CALLBACK OptionWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 void GetAlbumLyrics(HWND hwnd);
@@ -390,7 +390,7 @@ BOOL CALLBACK OptionWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 	return FALSE;
 }
 
-void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
+void GetAlbumLyrics(HWND hwnd)
 {
 	while (!album_mutex.try_lock()) { Sleep(10); }
 	const wchar_t* filename = (const wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_FILENAME);
