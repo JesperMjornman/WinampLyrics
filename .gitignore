@@ -1,4 +1,6 @@
 gen-waveseek-master/*
+Debug/*
+Release/*
 DynWindow_src/*
 .vs/*
 WinampLyricsFinder/Debug
