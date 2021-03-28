@@ -1,6 +1,6 @@
 # Lyric Finder Winamp Plugin
 Simple plugin for displaying a new window containing lyrics fetched from online sources.
-Only tested for classical skin and might not work for any other skin.
+Only tested for modern skin and might not work for any other skin.
 
 Supports:
  * Fetching lyrics from online sources
