@@ -123,8 +123,13 @@ LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 		{
 			if (lParam == IPC_PLAYING_FILE)
 			{
-				if (isEnabled && activeThreads < MAX_THREAD_COUNT)
-					std::thread(GetAlbumLyrics, hwnd).detach();
+				if (isEnabled)
+				{
+					if (isThreadingEnabled && activeThreads < MAX_THREAD_COUNT)
+						std::thread(GetAlbumLyrics, hwnd).detach();
+					else
+						GetAlbumLyrics(hwnd);
+				}
 			}
 			else if (lParam == IPC_FF_ONCOLORTHEMECHANGED)
 			{
