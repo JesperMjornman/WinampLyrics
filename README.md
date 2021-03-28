@@ -16,10 +16,6 @@ TODO:
  * songlyrics.com
 - [ ] Fix all bugs
 
-## BUGS
-Some known bugs:
- - Sometimes crashes due to some synchronization issue.
-
 ## Visuals
 Supports visuals from Winamp modern with different color schemes.
 
