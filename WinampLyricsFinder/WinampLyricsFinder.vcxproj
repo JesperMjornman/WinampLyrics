@@ -94,6 +94,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>E:\Program Files %28x86%29\Winamp SDK;E:\Program Files %28x86%29\Winamp SDK\Wasabi;C:\Users\46709\source\repos\WinampLyricsFinder\WinampLyricsFinder;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -115,6 +116,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>E:\Program Files %28x86%29\Winamp SDK;E:\Program Files %28x86%29\Winamp SDK\Wasabi;C:\Users\46709\source\repos\WinampLyricsFinder\WinampLyricsFinder;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

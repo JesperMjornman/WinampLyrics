@@ -13,11 +13,115 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_FORMVIEW DIALOGEX 0, 0, 117, 56
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "LyricsFinder Options"
+FONT 8, "MS Shell Dlg", 400, 0, 0x0
+BEGIN
+    PUSHBUTTON      "Save",IDC_SAVE_BUTTON,6,36,50,14
+    PUSHBUTTON      "Exit",IDC_EXIT_BUTTON,60,36,50,14
+    CONTROL         "Enable LyricsFinder",IDC_DISABLE_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,6,6,78,10
+    CONTROL         "Enable Threading",IDC_THREADING_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,6,18,71,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_FORMVIEW, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 110
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 49
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_FORMVIEW AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
 // Swedish (Sweden) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_SVE)
 LANGUAGE LANG_SWEDISH, SUBLANG_SWEDISH
 #pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DIALOGVIEW DIALOGEX 0, 0, 195, 344
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
+CAPTION "Dialog"
+MENU IDR_MENU1
+FONT 8, "Microsoft Sans Serif", 400, 0, 0x0
+BEGIN
+    PUSHBUTTON      "Refresh",IDC_REFRESH_BUTTON,144,330,38,14
+    CTEXT           "No Lyrics",IDC_LYRIC_STRING,0,0,192,330,0,WS_EX_TRANSPARENT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_DIALOGVIEW, DIALOG
+    BEGIN
+        LEFTMARGIN, 8
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 337
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_DIALOGVIEW AFX_DIALOG_LAYOUT
+BEGIN
+    0,
+    100, 100, 0, 0,
+    0, 0, 100, 100
+END
+
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -71,53 +175,6 @@ IDR_ACCELERATOR2 ACCELERATORS
 BEGIN
     VK_DELETE,      ID_SUBMENU_RERENDER,    VIRTKEY, NOINVERT
     VK_F3,          ID_SUBMENU_VIEWFILEINFO, VIRTKEY, ALT, NOINVERT
-END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Dialog
-//
-
-IDD_DIALOGVIEW DIALOGEX 0, 0, 195, 344
-STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION
-CAPTION "Dialog"
-MENU IDR_MENU1
-FONT 8, "Microsoft Sans Serif", 400, 0, 0x0
-BEGIN
-    PUSHBUTTON      "Refresh",IDC_REFRESH_BUTTON,144,330,38,14
-    CTEXT           "No Lyrics",IDC_LYRIC_STRING,0,0,192,330,0,WS_EX_TRANSPARENT
-END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// DESIGNINFO
-//
-
-#ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO
-BEGIN
-    IDD_DIALOGVIEW, DIALOG
-    BEGIN
-        LEFTMARGIN, 8
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 337
-    END
-END
-#endif    // APSTUDIO_INVOKED
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// AFX_DIALOG_LAYOUT
-//
-
-IDD_DIALOGVIEW AFX_DIALOG_LAYOUT
-BEGIN
-    0,
-    100, 100, 0, 0,
-    0, 0, 100, 100
 END
 
 

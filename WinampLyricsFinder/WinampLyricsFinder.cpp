@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <thread>
 #include <mutex>
+#include <fstream>
 #include <exception>
 #include "api.h"
 #include <api\service\waservicefactory.h>
@@ -24,15 +25,17 @@
 #define WA_DLG_IMPLEMENT
 #include <Winamp\wa_dlg.h>
 
-
+//#define ENABLE_SCROLLING
 #define PLUGIN_NAME "Lyrics Finder"
 #define PLUGIN_VERSION "v1.0"
 #define FILE_INFO_BUFFER_SIZE 128
 #define MAX_THREAD_COUNT 1
 #define LYRICS_LABEL_TOP 0
 #define VALID_ALBUM_CHARACTERS L"abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ123456789-_@$£&'\" "
+#define SETTINGS_FILE_PATH ".\\Plugins\\LyricsFinder\\options.txt"
 
 static const GUID wndStateGUID = { 0x3fcd6a40, 0x95d2, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
+static const GUID wndStateOptionsGUID = { 0x3fcd6a41, 0x95d3, 0x4b0a, { 0x8a, 0x96, 0x24, 0x7e, 0xc5, 0xc3, 0x32, 0x9b } };
 static const GUID wndLangGUID =  { 0x486676e6, 0x9306, 0x4fcf, { 0x9d, 0x9b, 0x76, 0x5a, 0x65, 0xf9, 0xfe, 0xb8 } };
 
 const std::pair<unsigned,
@@ -44,17 +47,19 @@ api_application *WASABI_API_APP = 0;
 
 LRESULT CALLBACK ChildWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+BOOL    CALLBACK OptionWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 void GetAlbumLyrics(HWND hwnd);
+void ReadSettingsFile(HWND hwnd);
+void SaveSettings(HWND hwnd);
 int  CompareWstringValidCharacters(const std::wstring& a,
 								   const std::wstring& b,
 								   const std::wstring valid = VALID_ALBUM_CHARACTERS);
 
 HINSTANCE           WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
-embedWindowState    myWndState = { 0 };
+embedWindowState    myWndState = { 0 }, optionsWndState = { 0 };
 WNDPROC             lpWndProcOld = 0, lpWndProc = 0;
 HWND                embedWnd = NULL, childWnd = NULL;
-HMENU               menu, context_menu;
 WCHAR*              ini_file;
 WCHAR               wa_path[MAX_PATH] = { 0 };
 UINT                LYRICS_MENUID, EMBEDWND_ID;
@@ -63,8 +68,9 @@ std::wstring        activeSong, activeSongLyrics;
 std::mutex          album_mutex;
 LyricHandler        handler;
 COLORREF            rgbBgColor;
-bool                isEnabled = true, isColorChanged = false;
+bool                isEnabled = true, isThreadingEnabled = true, isColorChanged = false;
 int                 iCurrentLineScrolled = 0;
+char                fullFilename[MAX_PATH];
 
 // Winamp PLUGIN specific funcs
 void config();
@@ -137,14 +143,13 @@ LRESULT CALLBACK WaWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 
 void config()
 {
-	
+	DialogBox(plugin.hDllInstance, MAKEINTRESOURCE(IDD_FORMVIEW), plugin.hwndParent, (DLGPROC)OptionWindowProc);
 }
 
 void quit()
 {
-	//if (no_uninstall)
+	//if (!uninstall)
 	{
-		// this will attempt to save any required settings here if not doing an uninstall
 		DestroyEmbeddedWindow(&myWndState);
 	}
 }
@@ -161,6 +166,8 @@ int init()
 	}
 	else
 	{
+		ReadSettingsFile(plugin.hwndParent);
+		
 		WASABI_API_SVC = (api_service*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_API_SERVICE);
 		if (WASABI_API_SVC == (api_service*)1)
 			WASABI_API_SVC = NULL;
@@ -327,6 +334,57 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 	return HandleEmbeddedWindowChildMessages(embedWnd, EMBEDWND_ID, hwnd, message, wParam, lParam);
 }
 
+BOOL CALLBACK OptionWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+		case WM_INITDIALOG:
+		{
+			SendDlgItemMessage(hwnd, IDC_DISABLE_CHECK, BM_SETCHECK, isEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
+			SendDlgItemMessage(hwnd, IDC_THREADING_CHECK, BM_SETCHECK, isThreadingEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
+		}
+		case WM_COMMAND:
+		{
+			switch (LOWORD(wParam))
+			{
+			case IDC_DISABLE_CHECK:
+			{
+				isEnabled = SendDlgItemMessage(hwnd, IDC_DISABLE_CHECK, BM_GETCHECK, 0, 0);
+				break;
+			}
+			case IDC_THREADING_CHECK:
+			{
+				isThreadingEnabled = SendDlgItemMessage(hwnd, IDC_THREADING_CHECK, BM_GETCHECK, 0, 0);
+				break;
+			}
+			case IDC_EXIT_BUTTON:
+			{
+				EndDialog(hwnd, wParam);
+				break;
+			}
+			case IDC_SAVE_BUTTON:
+			{
+				SaveSettings(hwnd);
+				EndDialog(hwnd, wParam);
+				return TRUE;
+			}
+			case IDOK:
+			{
+				EndDialog(hwnd, IDOK);
+				break;
+			}
+			case IDCANCEL:
+			{
+				EndDialog(hwnd, IDCANCEL);
+				break;
+			}
+			}
+		}
+	default: return FALSE;
+	}
+	return FALSE;
+}
+
 void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 {
 	while (!album_mutex.try_lock()) { Sleep(10); }
@@ -384,6 +442,71 @@ void GetAlbumLyrics(HWND hwnd) // Fix to auto resize on song lyrics length.
 	}
 	album_mutex.unlock(); // Unlock.
 	--activeThreads;
+}
+
+void ReadSettingsFile(HWND hwnd)
+{
+	GetFullPathNameA(SETTINGS_FILE_PATH, MAX_PATH, fullFilename, NULL);
+
+	std::ifstream inStream{ fullFilename };
+	if (!inStream.is_open())
+	{
+		std::string folderPath{ fullFilename };
+		CreateDirectoryA(folderPath.substr(0, folderPath.find_last_of('\\')).c_str(), NULL);
+		
+		std::ofstream outStream{ fullFilename };
+		if (outStream.is_open())
+		{
+			outStream << "enable=" << 1 << "\n" << "threading=" << 1;
+			outStream.close();
+		}
+		else
+		{
+			MessageBoxA(hwnd, "Failed to open/create settings file", "ERROR", MB_OK | MB_ICONERROR);
+		}
+	}
+	else
+	{
+		inStream.open(fullFilename);
+		try
+		{
+			if (inStream.is_open())
+			{
+				std::string inStr;
+				while (std::getline(inStream, inStr))
+				{
+					std::vector<std::string> token = Split(inStr, "=");
+					if (token[0] == "enable")
+					{
+						isEnabled = atoi(token[1].c_str());
+					}
+					else if (token[0] == "threading")
+					{
+						isThreadingEnabled = atoi(token[1].c_str());
+					}
+				}
+			}
+		}
+		catch (std::exception &e)
+		{
+			MessageBoxA(hwnd, e.what(), "Exception thrown", MB_OK | MB_ICONERROR);
+		}
+		inStream.close();
+	}
+}
+
+void SaveSettings(HWND hwnd)
+{
+	std::ofstream outStream{ fullFilename };
+	if (outStream.is_open())
+	{
+		outStream << "enable=" << isEnabled << "\n" << "threading=" << isThreadingEnabled;
+		outStream.close();
+	}
+	else
+	{
+		MessageBoxA(hwnd,"Failed to open settings file.", "ERROR", MB_OK | MB_ICONERROR);
+	}
 }
 
 // Simple solution to characters not matching in Album.
