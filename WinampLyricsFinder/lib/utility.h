@@ -147,7 +147,7 @@ static inline std::vector<std::string> Split(const std::string& str, const std::
 
             if (s.length() > 1 && s[s.length() - 1] == ' ')
             {
-                s = s.substr(0, s.length() - 1); // Temporär lösning
+                s = s.substr(0, s.length() - 1);
                 //s = s.substr(0, s.find)
             }
 

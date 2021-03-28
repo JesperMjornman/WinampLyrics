@@ -10,18 +10,8 @@
 #include <algorithm>
 
 
-/**
- * Contains all function definitions for decoding a GET response from the specified sites.
- * All static to allow function pointers to the correct decoder from LyricsHandler::
- */
 namespace LyricsUtil
 {
-    static bool AZLyricsDecoder  (const std::string&, const std::string&, Album&);
-
-   // template<typename pFunc>
-   // static std::vector<pFunc> decoders{ DarkLyricsDecoder, SongLyricsDecoder };
-
-
     /**
      * Converts std::string to utf-8 encoded std::wstring
      * @param str - string to convert.
@@ -70,19 +60,6 @@ namespace LyricsUtil
         return data;
     }
 
-    static void AZLyricsDecoder2(const std::string& artist, const std::string& album, Album& struct_album)
-    {
-
-    }
-
-    static bool AZLyricsDecoder(const std::string& artist, const std::string& album, Album& struct_album)
-    {
-        const std::string formatted{ FormatString(artist) };
-        const std::string requestURL{ "www.azlyrics.com/" + std::string{ formatted.at(0) } + "/" + formatted + ".html" };
-        const std::string data{ NetRequestsWin::Get(requestURL) };
-        return data != "failed";
-    }
-
     /**
      * Tries to fetch and decode from different sites until a match is found.
      * @TODO: Implement a vector to iterate through containing all decoders.
@@ -92,7 +69,7 @@ namespace LyricsUtil
      */
     static void TryDecode(const std::string& artist, const std::string& album, Album& struct_album)
     {
-        // Store all Virtual Classes in vector and iterate through them when testing.
+		// When more decoders are implemented store all in a vector and iterate through.
         if (DarkLyricsDecoder().DecodeLyrics(artist, album, struct_album))
             return;
         else if (SongLyricsDecoder().DecodeLyrics(artist, album, struct_album))
