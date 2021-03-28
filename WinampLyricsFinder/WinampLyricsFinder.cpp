@@ -488,10 +488,12 @@ void ReadSettingsFile(HWND hwnd)
 			}
 		}
 		catch (std::exception &e)
-		{
+		{		
 			MessageBoxA(hwnd, e.what(), "Exception thrown", MB_OK | MB_ICONERROR);
 		}
-		inStream.close();
+
+		if (inStream.is_open())
+			inStream.close();
 	}
 }
 
