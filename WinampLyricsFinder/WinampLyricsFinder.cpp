@@ -26,7 +26,7 @@
 #define WA_DLG_IMPLEMENT
 #include <Winamp\wa_dlg.h>
 
-//#define ENABLE_SCROLLING
+#define ENABLE_SCROLLING
 #define PLUGIN_NAME "Lyrics Finder"
 #define PLUGIN_VERSION "v1.0"
 #define FILE_INFO_BUFFER_SIZE 128
@@ -68,7 +68,7 @@ std::wstring        activeSong, activeSongLyrics;
 std::mutex          album_mutex;
 LyricHandler        handler;
 COLORREF            rgbBgColor;
-bool                isEnabled = true, isThreadingEnabled = true, isColorChanged = false;
+bool                isEnabled = true, isThreadingEnabled = true, isColorChanged = false, isScrollingEnabled = false;
 int                 iCurrentLineScrolled = 0;
 char                fullFilename[MAX_PATH];
 
@@ -255,7 +255,7 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			COLORREF newColor = WADlg_getColor(WADLG_ITEMBG);
 			/*
 			 * Avoids updating colors if no change is made. 
-			 * This avoids stuttering as the label is constantly redrawn.
+			 * This avoids stuttering as the label isn't constantly redrawn.
 			 * Will on update, reset the static label content as a color change will
 			 * not redraw the label but draw "over" it. As such it will be run twice after
 			 * updating any set color.
@@ -277,36 +277,39 @@ LRESULT CALLBACK ChildWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		}
 		case WM_MOUSEWHEEL:
 		{
-#ifdef ENABLE_SCROLLING
-			short zDelta   = GET_WHEEL_DELTA_WPARAM(wParam);
-			HWND hwndLabel = GetDlgItem(hwnd, IDC_LYRIC_STRING);
-			RECT rect{}, windowRect{};
+#ifdef ENABLE_SCROLLING // undefine if no fixes are made, not useful to have unused code.
+			if (isScrollingEnabled)
+			{
+				short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+				HWND hwndLabel = GetDlgItem(hwnd, IDC_LYRIC_STRING);
+				RECT rect{}, windowRect{};
 
-			// Get Label Size.
-			GetWindowRect(hwndLabel, &rect);
-			MapWindowPoints(HWND_DESKTOP, hwnd, (LPPOINT)&rect, 2);
-			
-			//
-			GetWindowRect(hwnd, &windowRect);
-			unsigned uHeightOfWindow = windowRect.bottom - windowRect.top;
+				// Get Label Size.
+				GetWindowRect(hwndLabel, &rect);
+				MapWindowPoints(HWND_DESKTOP, hwnd, (LPPOINT)&rect, 2);
 
-			std::pair<std::wstring, bool> interval = handler.GetInterval(activeSong, iCurrentLineScrolled, rect.bottom / 12);
-			if (zDelta > 0 && iCurrentLineScrolled > 0) // Save to make it easy later, saving if top or bottom scrolled.
-			{					
-				activeSongLyrics = interval.first;
-				--iCurrentLineScrolled;
-				SetDlgItemText(childWnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());
-			}
-			else if (zDelta < 0)
-			{					
-				//if (!interval.second)
+				//
+				GetWindowRect(hwnd, &windowRect);
+				unsigned uHeightOfWindow = windowRect.bottom - windowRect.top;
+
+				std::pair<std::wstring, bool> interval = handler.GetInterval(activeSong, iCurrentLineScrolled, rect.bottom / 12);
+				if (zDelta > 0 && iCurrentLineScrolled > 0) // Save to make it easy later, saving if top or bottom scrolled.
 				{
 					activeSongLyrics = interval.first;
-					++iCurrentLineScrolled;
+					--iCurrentLineScrolled;
 					SetDlgItemText(childWnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());
 				}
-			}
+				else if (zDelta < 0)
+				{
+					if (!interval.second)
+					{
+						activeSongLyrics = interval.first;
+						++iCurrentLineScrolled;
+						SetDlgItemText(childWnd, IDC_LYRIC_STRING, activeSongLyrics.c_str());
+					}
+				}
 #endif			
+			}
 			break;
 		}
 		case WM_SIZE: 
@@ -347,6 +350,7 @@ BOOL CALLBACK OptionWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 		{
 			SendDlgItemMessage(hwnd, IDC_DISABLE_CHECK, BM_SETCHECK, isEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
 			SendDlgItemMessage(hwnd, IDC_THREADING_CHECK, BM_SETCHECK, isThreadingEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
+			SendDlgItemMessage(hwnd, IDC_SCROLLING_CHECK, BM_SETCHECK, isScrollingEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
 		}
 		case WM_COMMAND:
 		{
@@ -360,6 +364,11 @@ BOOL CALLBACK OptionWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 			case IDC_THREADING_CHECK:
 			{
 				isThreadingEnabled = SendDlgItemMessage(hwnd, IDC_THREADING_CHECK, BM_GETCHECK, 0, 0);
+				break;
+			}
+			case IDC_SCROLLING_CHECK:
+			{
+				isScrollingEnabled = SendDlgItemMessage(hwnd, IDC_SCROLLING_CHECK, BM_GETCHECK, 0, 0);
 				break;
 			}
 			case IDC_EXIT_BUTTON:
@@ -462,7 +471,7 @@ void ReadSettingsFile(HWND hwnd)
 		std::ofstream outStream{ fullFilename };
 		if (outStream.is_open())
 		{
-			outStream << "enable=" << 1 << "\n" << "threading=" << 1;
+			outStream << "enable=" << 1 << "\n" << "threading=" << 1 << "\n" << "scrolling=" << 0;
 			outStream.close();
 		}
 		else
@@ -473,7 +482,7 @@ void ReadSettingsFile(HWND hwnd)
 	else
 	{
 		inStream.open(fullFilename);
-		try
+		try // try-catch block due to Split function throwing exceptions on bad strings and separators.
 		{
 			if (inStream.is_open())
 			{
@@ -488,6 +497,10 @@ void ReadSettingsFile(HWND hwnd)
 					else if (token[0] == "threading")
 					{
 						isThreadingEnabled = atoi(token[1].c_str());
+					}
+					else if (token[0] == "scrolling")
+					{
+						isScrollingEnabled = atoi(token[1].c_str());
 					}
 				}
 			}
@@ -507,7 +520,7 @@ void SaveSettings(HWND hwnd)
 	std::ofstream outStream{ fullFilename };
 	if (outStream.is_open())
 	{
-		outStream << "enable=" << isEnabled << "\n" << "threading=" << isThreadingEnabled;
+		outStream << "enable=" << isEnabled << "\n" << "threading=" << isThreadingEnabled << "\n" << "scrolling=" << isScrollingEnabled;
 		outStream.close();
 	}
 	else
