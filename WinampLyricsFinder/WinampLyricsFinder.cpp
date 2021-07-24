@@ -54,7 +54,7 @@ void ReadSettingsFile(HWND hwnd);
 void SaveSettings(HWND hwnd);
 int  CompareWstringValidCharacters(const std::wstring& a,
 								   const std::wstring& b,
-								   const std::wstring valid = VALID_ALBUM_CHARACTERS);
+								   const std::wstring  valid = VALID_ALBUM_CHARACTERS);
 
 HINSTANCE           WASABI_API_LNG_HINST = 0, WASABI_API_ORIG_HINST = 0;
 embedWindowState    myWndState = { 0 }, optionsWndState = { 0 };
@@ -170,9 +170,7 @@ int init()
 		return 1;
 	}
 	else
-	{
-		ReadSettingsFile(plugin.hwndParent);
-		
+	{		
 		WASABI_API_SVC = (api_service*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_API_SERVICE);
 		if (WASABI_API_SVC == (api_service*)1)
 			WASABI_API_SVC = NULL;
@@ -217,7 +215,9 @@ int init()
 			if (hAccel)
 			{
 				WASABI_API_APP->app_addAccelerators(childWnd, &hAccel, 1, TRANSLATE_MODE_NORMAL);
-			}			
+			}		
+
+			ReadSettingsFile(plugin.hwndParent); // MOVE IT. SEEMS TO NEED TO BE RUN AT A LATER "DATE"
 
 			AddEmbeddedWindowToMenus(TRUE, EMBEDWND_ID, WASABI_API_LNGSTRINGW(IDS_PLUGIN_NAME), -1);
 
@@ -348,7 +348,7 @@ BOOL CALLBACK OptionWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 	{
 		case WM_INITDIALOG:
 		{
-			SendDlgItemMessage(hwnd, IDC_DISABLE_CHECK, BM_SETCHECK, isEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
+			SendDlgItemMessage(hwnd, IDC_DISABLE_CHECK,   BM_SETCHECK, isEnabled          ? BST_CHECKED : BST_UNCHECKED, 0);
 			SendDlgItemMessage(hwnd, IDC_THREADING_CHECK, BM_SETCHECK, isThreadingEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
 			SendDlgItemMessage(hwnd, IDC_SCROLLING_CHECK, BM_SETCHECK, isScrollingEnabled ? BST_CHECKED : BST_UNCHECKED, 0);
 		}
@@ -461,7 +461,7 @@ void GetAlbumLyrics(HWND hwnd)
 void ReadSettingsFile(HWND hwnd)
 {
 	GetFullPathNameA(SETTINGS_FILE_PATH, MAX_PATH, fullFilename, NULL);
-
+	
 	std::ifstream inStream{ fullFilename };
 	if (!inStream.is_open())
 	{
@@ -481,15 +481,14 @@ void ReadSettingsFile(HWND hwnd)
 	}
 	else
 	{
-		inStream.open(fullFilename);
 		try // try-catch block due to Split function throwing exceptions on bad strings and separators.
 		{
 			if (inStream.is_open())
 			{
-				std::string inStr;
-				while (std::getline(inStream, inStr))
+				std::string line;
+				while (std::getline(inStream, line))
 				{
-					std::vector<std::string> token = Split(inStr, "=");
+					std::vector<std::string> token = Split(line, "=");
 					if (token[0] == "enable")
 					{
 						isEnabled = atoi(token[1].c_str());
@@ -500,7 +499,12 @@ void ReadSettingsFile(HWND hwnd)
 					}
 					else if (token[0] == "scrolling")
 					{
+#ifdef ENABLE_SCROLLING
 						isScrollingEnabled = atoi(token[1].c_str());
+#else
+						isScrollingEnabled = false;
+#endif
+						
 					}
 				}
 			}
