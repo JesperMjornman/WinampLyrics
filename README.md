@@ -2,6 +2,8 @@
 Simple plugin for displaying a new window containing lyrics fetched from online sources.
 Only tested for modern skin and might not work for any other skin.
 
+To use you either compile the dll or copy the files contained in the ```plugin-dlls/``` folder into your Winamp plugins folder.
+
 Supports:
  * Fetching lyrics from online sources
  * Displaying lyrics in child window
